@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Interactive Web Map – North Western Province</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-measure/dist/leaflet-measure.css" />
+
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { height: 100vh; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-measure/dist/leaflet-measure.js"></script>
+
+<script>
+  // Initialize map centered on Sri Lanka
+  var map = L.map('map').setView([7.8, 80.5], 8);
+
+  // Base layer
+  var basemap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  // Create a LayerGroup for GeoJSON
+  var conflictLayer = L.layerGroup().addTo(map);
+
+  // Define a highlight style
+  var highlightStyle = {
+    color: 'blue',
+    weight: 3,
+    fillOpacity: 0.5
+  };
+
+  // Store reference to selected feature
+  let selectedFeature = null;
+
+  // Load GeoJSON
+  fetch('human_elephant_conflict.geojson')
+    .then(response => response.json())
+    .then(data => {
+      var geoLayer = L.geoJSON(data, {
+        style: {
+          color: 'red',
+          weight: 2,
+          fillOpacity: 0.3
+        },
+        onEachFeature: function (feature, layer) {
+          let popupText = "";
+          for (let key in feature.properties) {
+            popupText += `<strong>${key}:</strong> ${feature.properties[key]}<br>`;
+          }
+
+          layer.bindPopup(popupText);
+
+          layer.on('click', function (e) {
+            if (selectedFeature) {
+              geoLayer.resetStyle(selectedFeature);
+            }
+            e.target.setStyle(highlightStyle);
+            selectedFeature = e.target;
+            e.target.openPopup();
+          });
+        }
+      });
+      conflictLayer.addLayer(geoLayer);
+    });
+
+  // Layer control
+  var overlays = {
+    "Human-Elephant Conflict Zones": conflictLayer
+  };
+  L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+
+  // Add measurement (ruler) control
+  L.control.measure({
+    primaryLengthUnit: 'kilometers',
+    secondaryLengthUnit: 'meters',
+    primaryAreaUnit: 'sqkilometers',
+    secondaryAreaUnit: 'hectares',
+    activeColor: '#ABE67E',
+    completedColor: '#C8F2BE'
+  }).addTo(map);
+
+</script>
+
+</body>
+</html>
